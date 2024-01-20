@@ -1,15 +1,15 @@
 package com.example.todolistsamebase.controller;
 
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import com.example.todolistsamebase.dao.TodoDAO;
 import com.example.todolistsamebase.model.Todo;
 
-import java.util.Random;
+import java.util.List;
 
 public class TodoController {
 
@@ -26,14 +26,20 @@ public class TodoController {
     private Label statusLabel;
 
     private final ObservableList<Todo> todoList = FXCollections.observableArrayList();
+    private final TodoDAO todoDAO = new TodoDAO();
 
     @FXML
     private void initialize() {
         // Initialize the todoListView with the todoList
         todoListView.setItems(todoList);
+        loadTodosFromDatabase();
     }
 
-    private final Random random = new Random();
+    private void loadTodosFromDatabase() {
+        // Load todos from the database and populate the list
+        List<Todo> todos = todoDAO.getAllTodos();
+        todoList.setAll(todos);
+    }
 
     @FXML
     private void addTodo() {
@@ -47,24 +53,19 @@ public class TodoController {
             return;
         }
 
+        // Create a new Todo object
+        Todo newTodo = new Todo(0, title, description);
 
-        // Generate a random id
-        int randomId = generateRandomId();
+        // Add the todo to the database
+        todoDAO.addTodo(newTodo);
 
-
-        // Create a new Todo object and add it to the list
-        Todo newTodo = new Todo(randomId, title, description);
-
-        todoList.add(newTodo);
+        // Refresh the list view by reloading data from the database
+        loadTodosFromDatabase();
 
         // Clear text fields
         titleField.clear();
         descriptionField.clear();
         statusLabel.setText("Todo added successfully.");
-    }
-
-    private int generateRandomId() {
-        return random.nextInt(1000); // Adjust the range as needed
     }
 
     @FXML
@@ -74,8 +75,12 @@ public class TodoController {
 
         // Check if a todo is selected
         if (selectedTodo != null) {
-            // Remove the selected todo from the list
-            todoList.remove(selectedTodo);
+            // Delete the selected todo from the database
+            todoDAO.deleteTodo(selectedTodo.getId());
+
+            // Refresh the list view by reloading data from the database
+            loadTodosFromDatabase();
+
             statusLabel.setText("Todo deleted successfully.");
         } else {
             statusLabel.setText("Please select a todo to delete.");

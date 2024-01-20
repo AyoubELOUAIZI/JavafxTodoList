@@ -6,11 +6,15 @@ import com.example.todolistsamebase.model.Todo;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TodoDAO {
+    private static final Logger LOGGER = Logger.getLogger(TodoDAO.class.getName());
+
     private static final String SELECT_ALL_TODOS = "SELECT * FROM todos";
-    private static final String INSERT_TODO = "INSERT INTO todos (title, description, due_date) VALUES (?, ?, ?)";
-    // Add more SQL queries for update and delete operations as needed
+    private static final String INSERT_TODO = "INSERT INTO todos (title, description) VALUES (?, ?)";
+    private static final String DELETE_TODO = "DELETE FROM todos WHERE id = ?";
 
     public List<Todo> getAllTodos() {
         List<Todo> todos = new ArrayList<>();
@@ -27,10 +31,10 @@ public class TodoDAO {
                 Todo todo = new Todo(id, title, description);
                 todos.add(todo);
             }
+            System.out.println("data has been retrieved 😀😀");
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error getting all todos", e);
         }
-
         return todos;
     }
 
@@ -40,22 +44,42 @@ public class TodoDAO {
 
             preparedStatement.setString(1, todo.getTitle());
             preparedStatement.setString(2, todo.getDescription());
-           // preparedStatement.setDate(3, new Date(todo.getDueDate().getTime()));
 
-            preparedStatement.executeUpdate();
-
-            // Retrieve the generated ID if needed
-            try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    int generatedId = generatedKeys.getInt(1);
-                    todo.setId(generatedId);
-                }
+            int affectedRows = preparedStatement.executeUpdate();
+            if (affectedRows == 0) {
+                LOGGER.log(Level.SEVERE, "Creating todo failed, no rows affected.");
+                throw new SQLException("Creating todo failed, no rows affected.");
             }
 
+            try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    todo.setId(generatedKeys.getInt(1));
+                } else {
+                    LOGGER.log(Level.SEVERE, "Creating todo failed, no ID obtained.");
+                    throw new SQLException("Creating todo failed, no ID obtained.");
+                }
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error adding todo to database", e);
         }
+          System.out.println("adding new todolist 🌷✅");
+
     }
 
-    // Add methods for update and delete operations as needed
+
+
+    public void deleteTodo(int todoId) {
+        try (Connection connection = DatabaseConnector.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_TODO)) {
+
+            preparedStatement.setInt(1, todoId);
+
+            preparedStatement.executeUpdate();
+            System.out.println("to do list has been deleted 💥💛");
+
+
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error deleting todo from database", e);
+        }
+    }
 }
